@@ -1,0 +1,15 @@
+{
+  "name": "FabulaUltimator",
+  "script": "FabulaUltimator.js",
+  "version": "1.0.0",
+  "previousversions": [],
+  "description": "",
+  "authors": "morgdalaine",
+  "roll20userid": "61327",
+  "useroptions": [],
+  "dependencies": [],
+  "modifies": {
+    "character.name": "read,write"
+  },
+  "conflicts": []
+}
