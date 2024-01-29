@@ -4,7 +4,7 @@ var FabulaUltimator =
     const G_CONSTANTS = {
       api: '!fabula',
       script: 'FabulaUltimator',
-      version: '0.0',
+      version: `0.0.${Date.now()}`,
       journalUrl: 'https://journal.roll20.net/character/',
       assetUrl: 'https://raw.githubusercontent.com/morgdalaine/fabula-ultimator/main/assets/',
       commands: {
@@ -77,7 +77,7 @@ var FabulaUltimator =
     const sendHelpMenu = (player) => {
       const blueprint = {
         header: makeHeader({
-          text: `FabulaUltimator ${G_CONSTANTS.version}.${Date.now()}`,
+          text: `FabulaUltimator ${G_CONSTANTS.version}`,
         }),
         body: [
           makeSpan({
@@ -141,18 +141,71 @@ var FabulaUltimator =
         ],
       };
 
+      // include in export list if
+      // - playerIsGM
+      // - controlledby = 'all'
+      // - controlledby = player.id
       sheets.forEach((sheet) => {
-        if (player && !playerIsGM(player.id)) {
+        const controlledby = sheet.get('controlledby');
+        if (
+          playerIsGM(player?.id) ||
+          controlledby.includes('all') ||
+          controlledby.includes(player?.id)
+        ) {
+          blueprint.body.push(createSheetEntry(sheet));
         }
-
-        blueprint.body.push(createSheetEntry(sheet));
       });
 
       whisper(player, fabulaContainer(blueprint));
     };
 
-    const exportSheet = (player, params) => {
-      log(`exportSheet > ${params}`);
+    const exportSheet = async (player, search) => {
+      let sheets = findObjs({ _type: 'character', _id: search });
+      if (!sheets.length) {
+        sheets = findObjs({ _type: 'character', name: search }, { caseInsensitive: true });
+      }
+
+      const sheet = sheets.shift();
+
+      // TODO a prettier none sheet left grief
+      if (!sheet) {
+        whisper(player, `${search} is not a valid sheet.`);
+        return;
+      }
+
+      log(sheet);
+      const attributes = getAllAttributes(sheet);
+      log('exportSheet => ');
+      log(attributes);
+
+      // add name, bio, gminfo
+      attributes.push({ name: 'name', current: sheet.get('name'), max: '' });
+      const bio = await new Promise((resolve, reject) => {
+        sheet.get('bio', resolve);
+      });
+      attributes.push({ name: 'bio', current: bio, max: '' });
+      const gmnotes = await new Promise((resolve, reject) => {
+        sheet.get('gmnotes', resolve);
+      });
+      attributes.push({ name: 'gmnotes', current: gmnotes, max: '' });
+
+      // whisper(player, fabulaContainer(blueprint));
+    };
+
+    const getAllAttributes = (sheet) => {
+      const attributes = findObjs({ _type: 'attribute', _characterid: sheet.id });
+      log('getAllAttribute => ');
+      log(attributes);
+
+      const exported = [];
+      attributes.forEach((attr) => {
+        exported.push({
+          name: attr.name,
+          value: attr.current,
+          max: attr.max,
+        });
+      });
+      return exported;
     };
 
     const STYLE_DOWNLOAD_LINK = [
@@ -165,6 +218,7 @@ var FabulaUltimator =
       `height: 40px;`,
     ].join('');
     const createSheetEntry = (sheet) => {
+      const sheetId = sheet.get('id');
       const sheetName = sheet.get('name');
 
       const journal = makeJournalLink(sheet);
@@ -177,7 +231,7 @@ var FabulaUltimator =
       });
       const download = makeLink({
         text: feather,
-        href: `!fabula --export ${sheetName}`,
+        href: `!fabula --export ${sheetId}`,
         style: STYLE_DOWNLOAD_LINK,
         title: `Download ${sheetName}`,
       });
@@ -279,14 +333,18 @@ var FabulaUltimator =
     const STYLE_JOURNAL_IMAGE = [`border: 1px solid #000000;`, `border-radius: 4px;`].join('');
     const STYLE_JOURNAL_TEXT = [FONT_TITLE, `text-transform: uppercase;`, `padding: 8px;`].join('');
     const makeJournalLink = (sheet) => {
-      const avatar = sheet.get('avatar');
       const sheetName = sheet.get('name');
-      const blueprint = [
-        `<table>`,
-        `<tr>`,
+      const avatar = sheet.get('avatar');
+      const avatarBlocks = [
         `<td>`,
         makeImage({ src: avatar, style: STYLE_JOURNAL_IMAGE, alt: sheetName }),
         `</td>`,
+      ].join('');
+
+      const blueprint = [
+        `<table>`,
+        `<tr>`,
+        avatar ? avatarBlocks : null,
         `<td>`,
         `<span style="${STYLE_JOURNAL_TEXT}">${sheetName}</span>`,
         `</td>`,
@@ -318,7 +376,7 @@ var FabulaUltimator =
     on('ready', () => {
       FabulaUltimator.checkInstall();
       FabulaUltimator.registerEventHandlers();
-      log(`FabulaUltimator ${G_CONSTANTS.version}.${Date.now()}`);
+      log(`FabulaUltimator ${G_CONSTANTS.version}`);
       sendChat('System', '!fabula');
     });
 

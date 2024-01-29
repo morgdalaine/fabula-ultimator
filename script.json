@@ -9,7 +9,8 @@
   "useroptions": [],
   "dependencies": [],
   "modifies": {
-    "character.name": "read,write"
+    "character.*": "read,write",
+    "attribute.*": "read,write"
   },
   "conflicts": []
 }
