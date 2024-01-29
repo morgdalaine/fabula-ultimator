@@ -19,21 +19,158 @@ var FabulaUltimator =
       },
     };
 
-    const defaultState = {
-      overwrite: false,
-      journal: 'all',
-      controllers: 'all',
+    const IMPORT_TO_ROLL20_CROSSWALK = {
+      lvl: 'level',
+      armor: {
+        mdef: 'armor_magic_defense',
+        mdefbonus: 'armor_magic_defense_bonus',
+        cost: 'armor_cost',
+        init: 'armor_initiative',
+        def: 'armor_defense',
+        defbonus: 'armor_defense_bonus',
+        name: 'armor_name',
+      },
+      shield: {
+        mdef: 'shield_magic_defense',
+        mdefbonus: 'shield_magic_defense_bonus',
+        cost: 'shield_cost',
+        init: 'shield_initiative',
+        def: 'shield_defense',
+        defbonus: 'shield_defense_bonus',
+        name: 'shield_name',
+      },
+      extra: {
+        init: 'initiative_bonus', // +4 initiative
+        precision: 'accuracy_bonus', // +3 bonus to accuracy
+        magic: 'magic_bonus', // +3 bonus to magic
+        extrainit: 'initiative_mod',
+        mp: 'mp_mod',
+        hp: 'hp_mod',
+        def: 'defense_mod',
+        mDef: 'magic_defense_mod',
+      },
+      attributes: {
+        dexterity: { name: 'dexterity', max: true },
+        might: { name: 'might', max: true },
+        will: { name: 'will', max: true },
+        insight: { name: 'insight', max: true },
+      },
+      attacks: [
+        {
+          name: 'repeating_attacks_-UUID_attack_name',
+          attr1: 'repeating_attacks_-UUID_attack_check_1',
+          attr2: 'repeating_attacks_-UUID_attack_check_2',
+          range: 'repeating_attacks_-UUID_attack_distance',
+          special: 'repeating_attacks_-UUID_attack_special',
+          extraDamage: 'repeating_attacks_-UUID_attack_extra_damage',
+          type: 'repeating_attacks_-UUID_attack_damage_type',
+        },
+      ],
+      spells: {
+        name: 'repeating_spells_-UUID_spell_name',
+        attr1: 'repeating_spells_-UUID_spell_check_1',
+        attr2: 'repeating_spells_-UUID_spell_check_2',
+        type: 'repeating_spells_-UUID_spell_type',
+        duration: 'repeating_spells_-UUID_spell_duration',
+        range: 'repeating_spells_-UUID_spell_range',
+        mp: 'repeating_spells_-UUID_spell_mp',
+        target: 'repeating_spells_-UUID_spell_target',
+        special: 'repeating_spells_-UUID_spell_special',
+        effect: 'repeating_spells_-UUID_spell_effect',
+      },
+      species: 'species',
+      notes: {
+        name: 'repeating_notes_-UUID_note_name',
+        effect: 'repeating_notes_-UUID_note_effect',
+      },
+      raregear: {
+        effect: 'repeating_raregear_-UUID_gear_name',
+        name: 'repeating_raregear_-UUID_gear_effect',
+      },
+      actions: {
+        name: 'repeating_actions_-UUID_action_name',
+        effect: 'repeating_actions_-UUID_action_effect',
+      },
+      description: 'description',
+      special: {
+        effect: 'repeating_specials_-UUID_special_effect',
+        name: 'repeating_specials_-UUID_special_name',
+      },
+      name: 'character_name',
+      traits: 'traits',
+      weaponattacks: {
+        weapon: {
+          category: 'repeating_weapons_-UUID_weapon_category',
+          name: 'repeating_weapons_-UUID_weapon_name',
+          att1: 'repeating_weapons_-UUID_weapon_check_1',
+          att2: 'repeating_weapons_-UUID_weapon_check_2',
+          cost: 'repeating_weapons_-UUID_weapon_cost',
+          damage: 'repeating_weapons_-UUID_weapon_damage',
+          hands: 'repeating_weapons_-UUID_weapon_hands',
+          prec: 'repeating_weapons_-UUID_weapon_precision',
+          range: 'repeating_weapons_-UUID_weapon_range',
+          type: 'repeating_weapons_-UUID_weapon_type',
+        },
+        name: 'repeating_weapons_-UUID_weapon_attack_name',
+        special: 'repeating_weapons_-UUID_weapon_special',
+        extraDamage: 'repeating_weapons_-UUID_weapon_extra_damage',
+        flathit: 'repeating_weapons_-UUID_weapon_attack_precision',
+        flatdmg: 'repeating_weapons_-UUID_weapon_attack_damage',
+      },
+      rank: 'rank',
+      affinities: {
+        physical: 'physical',
+        air: 'air',
+        bolt: 'bolt',
+        dark: 'dark',
+        earth: 'earth',
+        fire: 'fire',
+        ice: 'ice',
+        light: 'light',
+        poison: 'poison',
+      },
+      createdBy: 'created_by',
+      companionlvl: 'companion_skill_level',
+      companionpclvl: 'pc_level',
+    };
+
+    const DEFAULT_STATE = {
+      overwrite: true,
+      inplayerjournals: 'all',
+      controlledby: 'all',
     };
 
     const checkInstall = () => {
-      // delete all on load when true
-      const debug = false;
+      const debug = true;
       if (debug) {
         delete state.fabula;
-        let objects = findObjs({ _type: 'character' }, { caseInsensitive: true });
-        for (let i = 0; i < objects.length; i++) {
-          objects[i].remove();
-        }
+        // delete all on load when true
+        // let sheets = findObjs({ _type: 'character' }, { caseInsensitive: true });
+        // for (let i = 0; i < sheets.length; i++) {
+        //   sheets[i].remove();
+        // }
+      }
+
+      if (Object.hasOwn(state, 'fabula')) {
+        state.fabula = state.fabula || {};
+      }
+
+      setDefaults();
+    };
+
+    const setDefaults = (playerid = null) => {
+      if (!state.fabula) {
+        state.fabula = {};
+      }
+
+      state.fabula = Object.assign({}, DEFAULT_STATE);
+
+      if (playerid) {
+        state.fabula[playerid] = Object.assign({}, DEFAULT_STATE);
+      } else {
+        findObjs({ _type: 'player' }).forEach((player) => {
+          state.fabula[player.id] = Object.assign({}, DEFAULT_STATE);
+        });
       }
     };
 
@@ -56,9 +193,19 @@ var FabulaUltimator =
       }
 
       const [flag, params] = args;
-      log({ this: 'eventHandler', message: message.content, flag, params, command, player });
+      // log({ this: 'eventHandler', message: message.content, flag, params, command, player });
       switch (flag) {
-        case 'export':
+        case 'import': {
+          if (params) {
+            importJSON(player, params);
+          } else {
+            sendHelpMenu(player);
+          }
+
+          break;
+        }
+
+        case 'export': {
           if (params) {
             exportSheet(player, params);
             return;
@@ -67,6 +214,13 @@ var FabulaUltimator =
           listSheetsForExport(player);
 
           break;
+        }
+
+        case 'reset': {
+          state.fabula[player.id] = {};
+          setDefaults(player.id);
+          break;
+        }
 
         case 'help':
         default:
@@ -125,6 +279,192 @@ var FabulaUltimator =
       sendChat(G_CONSTANTS.script, fabulaContainer(blueprint), null, { noarchive: true });
     };
 
+    const importJSON = (player, raw) => {
+      let json;
+      try {
+        json = JSON.parse(raw.replace('\n', ' '));
+      } catch (ex) {
+        whisper(player, makeError({ error: ex }));
+        return;
+      }
+
+      if (!json?.name?.length) {
+        whisper(player, makeError({ error: 'Sheet name must be defined.' }));
+        return;
+      }
+
+      let sheet;
+      if (state.fabula[player.id].overwrite) {
+        const sheets = findObjs({ _type: 'character', name: json.name }, { caseInsensitive: true });
+        if (sheets.length) {
+          sheet = sheets.shift();
+
+          for (let i = 0; i < sheets.length; i++) {
+            sheets[i].remove();
+          }
+        }
+      }
+
+      // create new sheet if one does not exist
+      if (!sheet) {
+        sheet = createObj('character', {
+          name: json.name,
+          inplayerjournals: 'all',
+          controlledby: player.id,
+        });
+      }
+
+      whisper(player, fabulaContainer({ body: [`Importing **${json.name}**...`] }));
+
+      const repeatingUUIDs = {};
+      const flatJson = flattenObject(json);
+      Object.keys(flatJson).forEach((key) => {
+        const prefix = key.match(/(\w+)\[(\w+)\]/g)?.shift();
+
+        if (prefix && !Object.hasOwn(repeatingUUIDs, prefix)) {
+          repeatingUUIDs[prefix] = generateRowID();
+        }
+
+        addAttributeToSheet(sheet.id, key, flatJson[key], repeatingUUIDs[prefix]);
+      });
+
+      sendImportComplete(player, sheet);
+    };
+
+    const sendImportComplete = (player, sheet) => {
+      const blueprint = {
+        header: makeHeader({ text: 'Import Successful!' }),
+        body: [createSheetEntry(sheet)],
+      };
+
+      whisper(player, fabulaContainer(blueprint));
+    };
+
+    const flattenObject = (object) => {
+      // The object which contains the final result
+      let result = {};
+
+      // loop through the object
+      for (const i in object) {
+        // We check the type of the i using
+        // typeof() function and recursively
+        // call the function again
+        if (typeof object[i] === 'object') {
+          if (!Array.isArray(object[i])) {
+            const temp = flattenObject(object[i]);
+            for (const j in temp) {
+              // Store temp in result
+              result[`${i}.${j}`] = temp[j];
+            }
+          } else {
+            for (let j = 0; j < object[i].length; j++) {
+              if (typeof object[i][j] === 'object') {
+                const temp = flattenObject(object[i][j]);
+                Object.keys(temp).forEach((key) => {
+                  result[`${i}[${j}].${key}`] = temp[key];
+                });
+              } else {
+                result[`${i}[${j}]`] = object[i][j];
+              }
+            }
+          }
+        }
+
+        // Else store object[i] in result directly
+        else {
+          result[i] = object[i];
+        }
+      }
+      return result;
+    };
+
+    const getObjectByPath = (object, path) => {
+      // convert indexes to properties
+      // strip any leading dot
+      path = path.replace(/\[(\w+)\]/g, '.$1').replace(/^\./, '');
+      const properties = path.split('.');
+      for (let i = 0; i < properties.length; ++i) {
+        const key = properties[i];
+        if (key in object) {
+          object = object[key];
+        } else {
+          return;
+        }
+      }
+      return object;
+    };
+
+    const crosswalkImportToRoll20 = (path) => {
+      // remove array indexes
+      path = path.replace(/\[(\w+)\]/g, '');
+      return getObjectByPath(IMPORT_TO_ROLL20_CROSSWALK, path);
+    };
+
+    const addAttributeToSheet = (id, path, value, uuid) => {
+      const attr = crosswalkImportToRoll20(path);
+      if (!attr) {
+        return;
+      }
+
+      let name = attr;
+      let max = '';
+
+      if (typeof attr == 'object') {
+        name = attr.name;
+        max = attr.max ? value : '';
+      }
+
+      log(path);
+      log('  ' + (name ?? attr));
+      log('    ' + value);
+      log('      ' + max);
+
+      if (uuid) {
+        name = name.replace('-UUID', uuid);
+      }
+
+      createObj('attribute', {
+        characterid: id,
+        name: name,
+        current: value,
+        max,
+      });
+    };
+
+    const generateUUID = (() => {
+      let a = 0;
+      let b = [];
+
+      return () => {
+        let c = new Date().getTime() + 0;
+        let f = 7;
+        let e = new Array(8);
+        let d = c === a;
+        a = c;
+        for (; 0 <= f; f--) {
+          e[f] = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz'.charAt(c % 64);
+          c = Math.floor(c / 64);
+        }
+        c = e.join('');
+        if (d) {
+          for (f = 11; 0 <= f && 63 === b[f]; f--) {
+            b[f] = 0;
+          }
+          b[f]++;
+        } else {
+          for (f = 0; 12 > f; f++) {
+            b[f] = Math.floor(64 * Math.random());
+          }
+        }
+        for (f = 0; 12 > f; f++) {
+          c += '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz'.charAt(b[f]);
+        }
+        return c;
+      };
+    })();
+
+    const generateRowID = () => generateUUID().replace(/_/g, 'Z');
+
     const listSheetsForExport = (player) => {
       const sheets = findObjs({
         _type: 'character',
@@ -173,10 +513,7 @@ var FabulaUltimator =
         return;
       }
 
-      log(sheet);
       const attributes = getAllAttributes(sheet);
-      log('exportSheet => ');
-      log(attributes);
 
       // add name, bio, gminfo
       attributes.push({ name: 'name', current: sheet.get('name'), max: '' });
@@ -193,11 +530,9 @@ var FabulaUltimator =
     };
 
     const getAllAttributes = (sheet) => {
-      const attributes = findObjs({ _type: 'attribute', _characterid: sheet.id });
-      log('getAllAttribute => ');
-      log(attributes);
-
       const exported = [];
+      const attributes = findObjs({ _type: 'attribute', _characterid: sheet.id });
+
       attributes.forEach((attr) => {
         exported.push({
           name: attr.name,
@@ -373,11 +708,32 @@ var FabulaUltimator =
       ].join('');
     };
 
+    const STYLE_ERROR = [
+      `display: block;`,
+      FONT_TITLE,
+      `font-size: 1.5rem;`,
+      `font-weight: bold;`,
+      `line-height: 120%;`,
+      `text-transform: uppercase;`,
+      `padding: 8px;`,
+      `padding-left: 16px;`,
+      `color: rgb(255, 255, 255);`,
+      `background: rgb(209, 35, 42);`,
+      `border-radius: 4px 4px 0 0;`,
+    ].join('');
+    const makeError = ({ error, header = 'An Error Occurred!' }) => {
+      const blueprint = {
+        header: makeHeader({ text: header, style: STYLE_ERROR }),
+        body: [makeSpan({ text: error })],
+      };
+      return fabulaContainer(blueprint);
+    };
+
     on('ready', () => {
       FabulaUltimator.checkInstall();
       FabulaUltimator.registerEventHandlers();
       log(`FabulaUltimator ${G_CONSTANTS.version}`);
-      sendChat('System', '!fabula');
+      sendChat(G_CONSTANTS.script, '!fabula', null, { noarchive: true });
     });
 
     return {
