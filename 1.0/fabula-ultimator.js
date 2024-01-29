@@ -43,11 +43,11 @@ var FabulaUltimator =
         init: 'initiative_bonus', // +4 initiative
         precision: 'accuracy_bonus', // +3 bonus to accuracy
         magic: 'magic_bonus', // +3 bonus to magic
-        extrainit: 'initiative_mod',
-        mp: 'mp_mod',
-        hp: 'hp_mod',
-        def: 'defense_mod',
-        mDef: 'magic_defense_mod',
+        extrainit: 'initiative_extra',
+        mp: 'mp_extra',
+        hp: 'hp_extra',
+        def: 'defense_extra',
+        mDef: 'magic_defense_extra',
       },
       attributes: {
         dexterity: { name: 'dexterity', max: true },
@@ -129,7 +129,7 @@ var FabulaUltimator =
         light: 'light',
         poison: 'poison',
       },
-      createdBy: 'created_by',
+      createdBy: 'createdby',
       companionlvl: 'companion_skill_level',
       companionpclvl: 'pc_level',
     };
@@ -282,7 +282,7 @@ var FabulaUltimator =
     const importJSON = (player, raw) => {
       let json;
       try {
-        json = JSON.parse(raw.replace('\n', ' '));
+        json = JSON.parse(raw.replace('\\n', ' '));
       } catch (ex) {
         whisper(player, makeError({ error: ex }));
         return;
@@ -315,6 +315,10 @@ var FabulaUltimator =
       }
 
       whisper(player, fabulaContainer({ body: [`Importing **${json.name}**...`] }));
+
+      sheet.set({
+        gmnotes: raw,
+      });
 
       const repeatingUUIDs = {};
       const flatJson = flattenObject(json);
@@ -414,13 +418,12 @@ var FabulaUltimator =
         max = attr.max ? value : '';
       }
 
-      log(path);
-      log('  ' + (name ?? attr));
-      log('    ' + value);
-      log('      ' + max);
-
       if (uuid) {
         name = name.replace('-UUID', uuid);
+      }
+
+      if (value === true || value === false) {
+        value = value ? 'on' : '0';
       }
 
       createObj('attribute', {
