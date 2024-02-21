@@ -1,3 +1,7 @@
+# fabula ultima
+src/**/*.js
+
+
 #osx
 .DS_store
 **/*/.DS_Store

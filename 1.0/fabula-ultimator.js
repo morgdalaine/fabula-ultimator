@@ -1,10 +1,10 @@
 var FabulaUltimator =
   FabulaUltimator ||
   (function () {
-    const G_CONSTANTS = {
+    const CONSTANTS = {
       api: '!fabula',
       script: 'FabulaUltimator',
-      version: `0.0.${Date.now()}`,
+      version: `1.0`,
       journalUrl: 'https://journal.roll20.net/character/',
       assetUrl: 'https://raw.githubusercontent.com/morgdalaine/fabula-ultimator/main/assets/',
       commands: {
@@ -20,7 +20,38 @@ var FabulaUltimator =
     };
 
     const IMPORT_TO_ROLL20_CROSSWALK = {
+      name: 'character_name',
+      companionlvl: 'companion_skill_level',
+      companionpclvl: 'pc_level',
+      createdBy: 'createdby',
+      description: 'description',
       lvl: 'level',
+      multipart: 'multipart',
+      phases: 'phases',
+      rank: 'rank',
+      species: 'species',
+      traits: 'traits',
+      villain: 'villain',
+      id: 'import_id',
+      uid: 'import_uid',
+      attributes: {
+        dexterity: { name: 'dexterity', max: true },
+        might: { name: 'might', max: true },
+        will: { name: 'willpower', max: true },
+        insight: { name: 'insight', max: true },
+      },
+      affinities: {
+        physical: 'physical',
+        wind: 'air',
+        air: 'air',
+        bolt: 'bolt',
+        dark: 'dark',
+        earth: 'earth',
+        fire: 'fire',
+        ice: 'ice',
+        light: 'light',
+        poison: 'poison',
+      },
       armor: {
         mdef: 'armor_magic_defense',
         mdefbonus: 'armor_magic_defense_bonus',
@@ -49,27 +80,38 @@ var FabulaUltimator =
         def: 'defense_extra',
         mDef: 'magic_defense_extra',
       },
-      attributes: {
-        dexterity: { name: 'dexterity', max: true },
-        might: { name: 'might', max: true },
-        will: { name: 'will', max: true },
-        insight: { name: 'insight', max: true },
+      attacks: {
+        name: 'repeating_basic-attacks_-UUID_attack_name',
+        attr1: 'repeating_basic-attacks_-UUID_attack_attr1',
+        attr2: 'repeating_basic-attacks_-UUID_attack_attr2',
+        range: 'repeating_basic-attacks_-UUID_attack_distance',
+        special: 'repeating_basic-attacks_-UUID_attack_special',
+        extraDamage: 'repeating_basic-attacks_-UUID_attack_extra_damage',
+        type: 'repeating_basic-attacks_-UUID_attack_damage_type',
       },
-      attacks: [
-        {
-          name: 'repeating_attacks_-UUID_attack_name',
-          attr1: 'repeating_attacks_-UUID_attack_check_1',
-          attr2: 'repeating_attacks_-UUID_attack_check_2',
-          range: 'repeating_attacks_-UUID_attack_distance',
-          special: 'repeating_attacks_-UUID_attack_special',
-          extraDamage: 'repeating_attacks_-UUID_attack_extra_damage',
-          type: 'repeating_attacks_-UUID_attack_damage_type',
+      weaponattacks: {
+        weapon: {
+          category: 'repeating_weapons_-UUID_weapon_category',
+          name: 'repeating_weapons_-UUID_weapon_name',
+          att1: 'repeating_weapons_-UUID_weapon_attr1',
+          att2: 'repeating_weapons_-UUID_weapon_attr2',
+          cost: 'repeating_weapons_-UUID_weapon_cost',
+          damage: 'repeating_weapons_-UUID_weapon_damage',
+          hands: 'repeating_weapons_-UUID_weapon_hands',
+          prec: 'repeating_weapons_-UUID_weapon_accuracy',
+          range: 'repeating_weapons_-UUID_weapon_range',
+          type: 'repeating_weapons_-UUID_weapon_type',
         },
-      ],
+        name: 'repeating_weapons_-UUID_weapon_attack_name',
+        special: 'repeating_weapons_-UUID_weapon_special',
+        extraDamage: 'repeating_weapons_-UUID_weapon_extra_damage',
+        flathit: 'repeating_weapons_-UUID_weapon_attack_accuracy',
+        flatdmg: 'repeating_weapons_-UUID_weapon_attack_damage',
+      },
       spells: {
         name: 'repeating_spells_-UUID_spell_name',
-        attr1: 'repeating_spells_-UUID_spell_check_1',
-        attr2: 'repeating_spells_-UUID_spell_check_2',
+        attr1: 'repeating_spells_-UUID_spell_attr1',
+        attr2: 'repeating_spells_-UUID_spell_attr2',
         type: 'repeating_spells_-UUID_spell_type',
         duration: 'repeating_spells_-UUID_spell_duration',
         range: 'repeating_spells_-UUID_spell_range',
@@ -78,60 +120,22 @@ var FabulaUltimator =
         special: 'repeating_spells_-UUID_spell_special',
         effect: 'repeating_spells_-UUID_spell_effect',
       },
-      species: 'species',
       notes: {
         name: 'repeating_notes_-UUID_note_name',
         effect: 'repeating_notes_-UUID_note_effect',
       },
       raregear: {
-        effect: 'repeating_raregear_-UUID_gear_name',
-        name: 'repeating_raregear_-UUID_gear_effect',
+        name: 'repeating_rare-gears_-UUID_raregear_effect',
+        effect: 'repeating_rare-gears_-UUID_raregear_name',
       },
       actions: {
-        name: 'repeating_actions_-UUID_action_name',
-        effect: 'repeating_actions_-UUID_action_effect',
+        name: 'repeating_other-actions_-UUID_action_name',
+        effect: 'repeating_other-actions_-UUID_action_effect',
       },
-      description: 'description',
       special: {
-        effect: 'repeating_specials_-UUID_special_effect',
-        name: 'repeating_specials_-UUID_special_name',
+        name: 'repeating_special-rules_-UUID_special_name',
+        effect: 'repeating_special-rules_-UUID_special_effect',
       },
-      name: 'character_name',
-      traits: 'traits',
-      weaponattacks: {
-        weapon: {
-          category: 'repeating_weapons_-UUID_weapon_category',
-          name: 'repeating_weapons_-UUID_weapon_name',
-          att1: 'repeating_weapons_-UUID_weapon_check_1',
-          att2: 'repeating_weapons_-UUID_weapon_check_2',
-          cost: 'repeating_weapons_-UUID_weapon_cost',
-          damage: 'repeating_weapons_-UUID_weapon_damage',
-          hands: 'repeating_weapons_-UUID_weapon_hands',
-          prec: 'repeating_weapons_-UUID_weapon_precision',
-          range: 'repeating_weapons_-UUID_weapon_range',
-          type: 'repeating_weapons_-UUID_weapon_type',
-        },
-        name: 'repeating_weapons_-UUID_weapon_attack_name',
-        special: 'repeating_weapons_-UUID_weapon_special',
-        extraDamage: 'repeating_weapons_-UUID_weapon_extra_damage',
-        flathit: 'repeating_weapons_-UUID_weapon_attack_precision',
-        flatdmg: 'repeating_weapons_-UUID_weapon_attack_damage',
-      },
-      rank: 'rank',
-      affinities: {
-        physical: 'physical',
-        air: 'air',
-        bolt: 'bolt',
-        dark: 'dark',
-        earth: 'earth',
-        fire: 'fire',
-        ice: 'ice',
-        light: 'light',
-        poison: 'poison',
-      },
-      createdBy: 'createdby',
-      companionlvl: 'companion_skill_level',
-      companionpclvl: 'pc_level',
     };
 
     const DEFAULT_STATE = {
@@ -186,7 +190,7 @@ var FabulaUltimator =
       const command = args.shift();
       const player = getObj('player', message.playerid);
 
-      if (command != G_CONSTANTS.api) return;
+      if (command != CONSTANTS.api) return;
       if (args.length === 0) {
         sendHelpMenu(player);
         return;
@@ -231,7 +235,7 @@ var FabulaUltimator =
     const sendHelpMenu = (player) => {
       const blueprint = {
         header: makeHeader({
-          text: `FabulaUltimator ${G_CONSTANTS.version}`,
+          text: `FabulaUltimator ${CONSTANTS.version}`,
         }),
         body: [
           makeSpan({
@@ -276,7 +280,7 @@ var FabulaUltimator =
         // TBA
       }
 
-      sendChat(G_CONSTANTS.script, fabulaContainer(blueprint), null, { noarchive: true });
+      sendChat(CONSTANTS.script, fabulaContainer(blueprint), null, { noarchive: true });
     };
 
     const importJSON = (player, raw) => {
@@ -322,6 +326,7 @@ var FabulaUltimator =
 
       const repeatingUUIDs = {};
       const flatJson = flattenObject(json);
+
       Object.keys(flatJson).forEach((key) => {
         const prefix = key.match(/(\w+)\[(\w+)\]/g)?.shift();
 
@@ -329,10 +334,57 @@ var FabulaUltimator =
           repeatingUUIDs[prefix] = generateRowID();
         }
 
-        addAttributeToSheet(sheet.id, key, flatJson[key], repeatingUUIDs[prefix]);
+        const success = addAttributeToSheet(sheet.id, key, flatJson[key], repeatingUUIDs[prefix]);
+      });
+
+      createObj('attribute', {
+        characterid: sheet.id,
+        name: 'sheet_type',
+        current: 'bestiary',
       });
 
       sendImportComplete(player, sheet);
+    };
+
+    const addAttributeToSheet = (id, path, value, uuid) => {
+      const attr = crosswalkImportToRoll20(path);
+
+      if (!attr) {
+        return false;
+      }
+
+      let name = attr;
+      let max = '';
+
+      if (typeof attr == 'object') {
+        name = attr.name;
+        max = attr.max ? value : '';
+      }
+
+      if (uuid) {
+        name = name.replace('-UUID', uuid);
+      }
+
+      if (value === true || value === false) {
+        value = value ? 'on' : '0';
+      }
+
+      if (value === 'will') {
+        value = 'willpower';
+      }
+
+      if (path === 'species') {
+        value = value.toLowerCase();
+      }
+
+      createObj('attribute', {
+        characterid: id,
+        name: name,
+        current: value,
+        max,
+      });
+
+      return true;
     };
 
     const sendImportComplete = (player, sheet) => {
@@ -402,36 +454,6 @@ var FabulaUltimator =
       // remove array indexes
       path = path.replace(/\[(\w+)\]/g, '');
       return getObjectByPath(IMPORT_TO_ROLL20_CROSSWALK, path);
-    };
-
-    const addAttributeToSheet = (id, path, value, uuid) => {
-      const attr = crosswalkImportToRoll20(path);
-      if (!attr) {
-        return;
-      }
-
-      let name = attr;
-      let max = '';
-
-      if (typeof attr == 'object') {
-        name = attr.name;
-        max = attr.max ? value : '';
-      }
-
-      if (uuid) {
-        name = name.replace('-UUID', uuid);
-      }
-
-      if (value === true || value === false) {
-        value = value ? 'on' : '0';
-      }
-
-      createObj('attribute', {
-        characterid: id,
-        name: name,
-        current: value,
-        max,
-      });
     };
 
     const generateUUID = (() => {
@@ -529,6 +551,11 @@ var FabulaUltimator =
       });
       attributes.push({ name: 'gmnotes', current: gmnotes, max: '' });
 
+      log('<  eemp>');
+      log(attributes);
+      log('<  eemp>');
+
+      // TODO export json
       // whisper(player, fabulaContainer(blueprint));
     };
 
@@ -592,12 +619,12 @@ var FabulaUltimator =
 
     const whisper = (player, message) => {
       const whisperTo = player ? `/w ${player.get('displayname')} ` : '';
-      sendChat(G_CONSTANTS.script, `${whisperTo}${message}`, null, {
+      sendChat(CONSTANTS.script, `${whisperTo}${message}`, null, {
         noarchive: true,
       });
     };
 
-    const getAsset = (asset) => G_CONSTANTS.assetUrl + G_CONSTANTS.assets[asset];
+    const getAsset = (asset) => CONSTANTS.assetUrl + CONSTANTS.assets[asset];
 
     const STYLE_CONTAINER = [
       `background: white;`,
@@ -692,7 +719,7 @@ var FabulaUltimator =
 
       return makeLink({
         text: blueprint.join(''),
-        href: G_CONSTANTS.journalUrl + sheet.get('id'),
+        href: CONSTANTS.journalUrl + sheet.get('id'),
         style: STYLE_JOURNAL_LINK,
         title: `Open ${sheetName}`,
       });
@@ -735,8 +762,8 @@ var FabulaUltimator =
     on('ready', () => {
       FabulaUltimator.checkInstall();
       FabulaUltimator.registerEventHandlers();
-      log(`FabulaUltimator ${G_CONSTANTS.version}`);
-      sendChat(G_CONSTANTS.script, '!fabula', null, { noarchive: true });
+      log(`FabulaUltimator ${CONSTANTS.version}`);
+      sendChat(CONSTANTS.script, '!fabula', null, { noarchive: true });
     });
 
     return {
