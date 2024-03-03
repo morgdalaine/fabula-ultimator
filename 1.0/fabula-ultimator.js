@@ -143,10 +143,10 @@ var FabulaUltimator =
       if (DEBUG) {
         delete state.fabula;
         // delete all on load when true
-        // let sheets = findObjs({ _type: 'character' }, { caseInsensitive: true });
-        // for (let i = 0; i < sheets.length; i++) {
-        //   sheets[i].remove();
-        // }
+        let sheets = findObjs({ _type: 'character' }, { caseInsensitive: true });
+        for (let i = 0; i < sheets.length; i++) {
+          sheets[i].remove();
+        }
       }
 
       if (!Object.hasOwn(state, 'fabula') || state.fabula.version !== FABULA.version) {
@@ -163,7 +163,7 @@ var FabulaUltimator =
               cache: { lastsaved: 0 },
               config: {
                 overwrite: false,
-                inplayerjournals: 'none',
+                inplayerjournals: 'all',
                 controlledby: 'all',
               },
             };
@@ -328,7 +328,7 @@ var FabulaUltimator =
       // TBA GM specific commands
       // if (player && playerIsGM(player.id)) {}
 
-      sendChat(FABULA.script, fabulaContainer(blueprint), null, { noarchive: true });
+      whisper(player, fabulaContainer(blueprint), null, { noarchive: true });
     };
 
     const makeConfigButtons = (setting, value, options, playerid) => {
@@ -355,13 +355,13 @@ var FabulaUltimator =
       const inJournalSettings = makeConfigButtons(
         'inplayerjournals',
         c.inplayerjournals,
-        ['all', 'none', 'self'],
+        ['all', 'self', 'none'],
         player.id
       );
       const controlledBySettings = makeConfigButtons(
         'controlledby',
         c.controlledby,
-        ['all', 'none', 'self'],
+        ['all', 'self', 'none'],
         player.id
       );
 
@@ -411,6 +411,11 @@ var FabulaUltimator =
           for (let i = 0; i < sheets.length; i++) {
             sheets[i].remove();
           }
+
+          sheet.set({
+            inplayerjournals: state.fabula[player.id].inplayerjournals,
+            controlledby: state.fabula[player.id].controlledby,
+          });
         }
       }
 
@@ -418,8 +423,8 @@ var FabulaUltimator =
       if (!sheet) {
         sheet = createObj('character', {
           name: json.name,
-          inplayerjournals: 'all',
-          controlledby: player.id,
+          inplayerjournals: state.fabula[player.id].inplayerjournals,
+          controlledby: state.fabula[player.id].controlledby,
         });
       }
 
@@ -759,6 +764,7 @@ var FabulaUltimator =
     const FABULA_DEFAULT_BASE = `#30669c`;
     const FABULA_DEFAULT_ACCENT = `#4575a3`;
     const FABULA_ERROR = `#d1232a`;
+    const COLOR_BLACK = `#1d1d1d`;
 
     const STYLE_HEADER = [
       `display: block;`,
@@ -782,9 +788,10 @@ var FabulaUltimator =
       FONT_BODY,
       `font-style: italic;`,
       `margin-bottom: 8px;`,
+      `color: ${COLOR_BLACK};`,
     ].join('');
 
-    const STYLE_SPAN = [`display: block;`, FONT_BODY].join('');
+    const STYLE_SPAN = [`display: block;`, FONT_BODY, `color: ${COLOR_BLACK};`].join('');
     const makeSpan = ({ text, tag = 'span', style = STYLE_SPAN }) => {
       return `<${tag} style="${style}">${text}</${tag}>`;
     };
@@ -805,7 +812,7 @@ var FabulaUltimator =
       `border-radius: 0;`,
       `border: 1px solid black;`,
       `border-bottom: 2px solid black;`,
-      `color: black;`,
+      `color: ${COLOR_BLACK};`,
       `padding: 0px 4px;`,
       `text-align: center;`,
     ].join('');
@@ -829,11 +836,20 @@ var FabulaUltimator =
       FONT_BODY,
       `background: transparent;`,
       `padding :4px;`,
-      `color: black;`,
+      `color: ${COLOR_BLACK};`,
       `border: none;`,
     ].join('');
-    const STYLE_JOURNAL_IMAGE = [`border: 1px solid black;`, `border-radius: 4px;`].join('');
-    const STYLE_JOURNAL_TEXT = [FONT_TITLE, `text-transform: uppercase;`, `padding: 8px;`].join('');
+    const STYLE_JOURNAL_IMAGE = [
+      `border: 1px solid black;`,
+      `border-radius: 4px;`,
+      `color: ${COLOR_BLACK};`,
+    ].join('');
+    const STYLE_JOURNAL_TEXT = [
+      FONT_TITLE,
+      `text-transform: uppercase;`,
+      `padding: 8px;`,
+      `color: ${COLOR_BLACK};`,
+    ].join('');
     const makeJournalLink = (sheet) => {
       const sheetName = sheet.get('name');
       const avatar = sheet.get('avatar');
