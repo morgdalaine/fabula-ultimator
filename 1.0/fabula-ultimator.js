@@ -1,10 +1,10 @@
 var FabulaUltimator =
   FabulaUltimator ||
   (function () {
-    const CONSTANTS = {
+    const FABULA = {
       api: '!fabula',
       script: 'FabulaUltimator',
-      version: `1.0`,
+      version: 0.1,
       journalUrl: 'https://journal.roll20.net/character/',
       assetUrl: 'https://raw.githubusercontent.com/morgdalaine/fabula-ultimator/main/assets/',
       commands: {
@@ -112,7 +112,7 @@ var FabulaUltimator =
         name: 'repeating_spells_-UUID_spell_name',
         attr1: 'repeating_spells_-UUID_spell_attr1',
         attr2: 'repeating_spells_-UUID_spell_attr2',
-        type: 'repeating_spells_-UUID_spell_type',
+        // type: 'repeating_spells_-UUID_spell_type',
         duration: 'repeating_spells_-UUID_spell_duration',
         range: 'repeating_spells_-UUID_spell_range',
         mp: 'repeating_spells_-UUID_spell_mp',
@@ -138,15 +138,9 @@ var FabulaUltimator =
       },
     };
 
-    const DEFAULT_STATE = {
-      overwrite: true,
-      inplayerjournals: 'all',
-      controlledby: 'all',
-    };
-
+    const DEBUG = false;
     const checkInstall = () => {
-      const debug = true;
-      if (debug) {
+      if (DEBUG) {
         delete state.fabula;
         // delete all on load when true
         // let sheets = findObjs({ _type: 'character' }, { caseInsensitive: true });
@@ -155,25 +149,62 @@ var FabulaUltimator =
         // }
       }
 
-      if (Object.hasOwn(state, 'fabula')) {
-        state.fabula = state.fabula || {};
+      if (!Object.hasOwn(state, 'fabula') || state.fabula.version !== FABULA.version) {
+        log(`Update schema to【v${FABULA.version}】`);
+        switch (state.fabula && state.fabula.version) {
+          case 'Update Schema Version': {
+            state.fabula.version = FABULA.version;
+            break;
+          }
+
+          default: {
+            state.fabula = {
+              version: FABULA.version,
+              cache: { lastsaved: 0 },
+              config: {
+                overwrite: false,
+                inplayerjournals: 'none',
+                controlledby: 'all',
+              },
+            };
+          }
+        }
       }
 
-      setDefaults();
+      checkGlobalConfig();
+      setPlayerDefaults();
     };
 
-    const setDefaults = (playerid = null) => {
-      if (!state.fabula) {
-        state.fabula = {};
+    const checkGlobalConfig = () => {
+      const s = state.fabula;
+      const g = globalconfig && (globalconfig.FabulaUltimator || globalconfig.fabulaultimator);
+      if (g && g.lastsaved && g.lastsaved > s.cache.lastsaved) {
+        log(`Update from Global Config【${new Date(g.lastsaved * 1000)}】`);
+
+        // Overwrite existing sheets on import
+        switch (g.overwrite) {
+          case 'off':
+            s.config.overwrite = false;
+            break;
+
+          case 'on':
+          default:
+            s.config.overwrite = true;
+        }
+
+        // Set default value for In Player Journals
+        // Set default value for Controlled By
+
+        state.fabula.cache = globalconfig.fabulaultimator;
       }
+    };
 
-      state.fabula = Object.assign({}, DEFAULT_STATE);
-
+    const setPlayerDefaults = (playerid = null) => {
       if (playerid) {
-        state.fabula[playerid] = Object.assign({}, DEFAULT_STATE);
+        state.fabula[playerid] = _.clone(state.fabula.config);
       } else {
         findObjs({ _type: 'player' }).forEach((player) => {
-          state.fabula[player.id] = Object.assign({}, DEFAULT_STATE);
+          state.fabula[player.id] = _.clone(state.fabula.config);
         });
       }
     };
@@ -182,22 +213,24 @@ var FabulaUltimator =
       on('chat:message', eventHandler);
     };
 
-    const eventHandler = (message) => {
+    const eventHandler = async (message) => {
       if (message.type !== 'api') return;
 
       // parse message into command and arguments(s)
-      const args = message.content.split(/--(help|import|export|config)?/g).map((c) => c.trim());
+      const args = message.content
+        .split(/--(help|import|export|config|reset)?/g)
+        .map((c) => c.trim());
       const command = args.shift();
       const player = getObj('player', message.playerid);
 
-      if (command != CONSTANTS.api) return;
+      if (command != FABULA.api) return;
       if (args.length === 0) {
         sendHelpMenu(player);
         return;
       }
 
       const [flag, params] = args;
-      // log({ this: 'eventHandler', message: message.content, flag, params, command, player });
+      // log({ this: 'eventHandler', message: message.content, flag, params, command });
       switch (flag) {
         case 'import': {
           if (params) {
@@ -209,20 +242,30 @@ var FabulaUltimator =
           break;
         }
 
-        case 'export': {
+        // case 'export': {
+        //   if (params) {
+        //     await exportSheet(player, params);
+        //     return;
+        //   }
+
+        //   listSheetsForExport(player);
+
+        //   break;
+        // }
+
+        case 'config': {
           if (params) {
-            exportSheet(player, params);
-            return;
+            updateConfig(player, params);
           }
 
-          listSheetsForExport(player);
-
+          sendConfigMenu(player);
           break;
         }
 
         case 'reset': {
           state.fabula[player.id] = {};
-          setDefaults(player.id);
+          setPlayerDefaults(player.id);
+          sendConfigMenu(player);
           break;
         }
 
@@ -232,10 +275,17 @@ var FabulaUltimator =
       }
     };
 
+    const whisper = (player, message) => {
+      const whisperTo = player ? `/w ${player.get('displayname')} ` : '';
+      sendChat(FABULA.script, `${whisperTo}${message}`, null, {
+        noarchive: true,
+      });
+    };
+
     const sendHelpMenu = (player) => {
       const blueprint = {
         header: makeHeader({
-          text: `FabulaUltimator ${CONSTANTS.version}`,
+          text: `FabulaUltimator ${FABULA.version}`,
         }),
         body: [
           makeSpan({
@@ -249,11 +299,11 @@ var FabulaUltimator =
           makeSpan({ text: 'Import JSON to sheet' }),
           `</div>`,
 
-          // --export
-          `<div style="margin-bottom: 8px;">`,
-          makeLink({ text: '!fabula --export [sheetname]', href: '!fabula --export' }),
-          makeSpan({ text: 'List sheets to export to JSON, export sheet if provided <sheetname>' }),
-          `</div>`,
+          // TODO --export
+          // `<div style="margin-bottom: 8px;">`,
+          // makeLink({ text: '!fabula --export [sheetname]', href: '!fabula --export' }),
+          // makeSpan({ text: 'List sheets to export to JSON, export sheet if provided <sheetname>' }),
+          // `</div>`,
 
           // --config
           `<div style="margin-bottom: 8px;">`,
@@ -275,12 +325,67 @@ var FabulaUltimator =
         ],
       };
 
-      // GM specific commands
-      if (player && playerIsGM(player.id)) {
-        // TBA
-      }
+      // TBA GM specific commands
+      // if (player && playerIsGM(player.id)) {}
 
-      sendChat(CONSTANTS.script, fabulaContainer(blueprint), null, { noarchive: true });
+      sendChat(FABULA.script, fabulaContainer(blueprint), null, { noarchive: true });
+    };
+
+    const makeConfigButtons = (setting, value, options, playerid) => {
+      return options.map((v) => {
+        const text = typeof v === 'boolean' ? (v ? 'yes' : 'no') : v;
+        return value === v || (v === 'self' && value === playerid)
+          ? makeSpan({ text, style: STYLE_CONFIG_ACTIVE })
+          : makeLink({
+              text: text,
+              href: `!fabula --config ${setting}|${v}`,
+              style: STYLE_CONFIG_LINK,
+            });
+      });
+    };
+
+    const sendConfigMenu = (player) => {
+      const c = state.fabula[player.id] ?? state.fabula.config;
+      const overwriteSettings = makeConfigButtons(
+        'overwrite',
+        c.overwrite,
+        [true, false],
+        player.id
+      );
+      const inJournalSettings = makeConfigButtons(
+        'inplayerjournals',
+        c.inplayerjournals,
+        ['all', 'none', 'self'],
+        player.id
+      );
+      const controlledBySettings = makeConfigButtons(
+        'controlledby',
+        c.controlledby,
+        ['all', 'none', 'self'],
+        player.id
+      );
+
+      const config = [
+        [makeSpan({ text: 'Overwrite Existing Sheets' }), ...overwriteSettings],
+        [makeSpan({ text: 'Assign In Player Journals' }), ...inJournalSettings],
+        [makeSpan({ text: 'Assign Controlled By' }), ...controlledBySettings],
+      ];
+
+      const blueprint = {
+        header: makeHeader({
+          text: `FabulaUltimator Config`,
+        }),
+        body: makeConfigOptions(config),
+      };
+
+      whisper(player, fabulaContainer(blueprint), { noarchive: true }, { noarchive: true });
+    };
+
+    const updateConfig = (player, params) => {
+      let [config, value] = params.split('|');
+      if (['false', 'true'].includes(value)) value = value === 'true';
+      else if (value === 'self') value = player.id;
+      state.fabula[player.id][config] = value;
     };
 
     const importJSON = (player, raw) => {
@@ -532,44 +637,56 @@ var FabulaUltimator =
 
       const sheet = sheets.shift();
 
-      // TODO a prettier none sheet left grief
       if (!sheet) {
-        whisper(player, `${search} is not a valid sheet.`);
+        whisper(player, makeError({ error: `**${search}** is not a valid sheet.` }));
         return;
       }
 
-      const attributes = getAllAttributes(sheet);
+      whisper(
+        player,
+        fabulaContainer({
+          header: makeHeader({ text: 'Sheet Export' }),
+          body: [`Exporting **${sheet.get('name')}**...`],
+        })
+      );
+
+      const attributes = await getAllAttributes(sheet);
+
+      // TODO export json in Fultimator format
+
+      whisper(
+        player,
+        fabulaContainer({
+          header: makeHeader({ text: 'Sheet Export' }),
+          body: [`<pre>${JSON.stringify(attributes)}</pre>`],
+        })
+      );
+    };
+
+    const getAllAttributes = async (sheet) => {
+      const exported = [];
+      const attributes = findObjs({ _type: 'attribute', _characterid: sheet.id });
+      for (let i = 0; i < attributes.length; i++) {
+        const attr = {};
+        ['name', 'current', 'max'].forEach((field) => {
+          const value = attributes[i].get(field);
+          if (value) attr[field] = value;
+        });
+        exported.push(attr);
+      }
 
       // add name, bio, gminfo
-      attributes.push({ name: 'name', current: sheet.get('name'), max: '' });
+      exported.push({ name: 'character_name', current: sheet.get('name') });
+
       const bio = await new Promise((resolve, reject) => {
         sheet.get('bio', resolve);
       });
-      attributes.push({ name: 'bio', current: bio, max: '' });
+      exported.push({ name: 'bio', current: bio });
       const gmnotes = await new Promise((resolve, reject) => {
         sheet.get('gmnotes', resolve);
       });
-      attributes.push({ name: 'gmnotes', current: gmnotes, max: '' });
+      exported.push({ name: 'gmnotes', current: gmnotes });
 
-      log('<  eemp>');
-      log(attributes);
-      log('<  eemp>');
-
-      // TODO export json
-      // whisper(player, fabulaContainer(blueprint));
-    };
-
-    const getAllAttributes = (sheet) => {
-      const exported = [];
-      const attributes = findObjs({ _type: 'attribute', _characterid: sheet.id });
-
-      attributes.forEach((attr) => {
-        exported.push({
-          name: attr.name,
-          value: attr.current,
-          max: attr.max,
-        });
-      });
       return exported;
     };
 
@@ -617,14 +734,7 @@ var FabulaUltimator =
       return sheetEntry.join('');
     };
 
-    const whisper = (player, message) => {
-      const whisperTo = player ? `/w ${player.get('displayname')} ` : '';
-      sendChat(CONSTANTS.script, `${whisperTo}${message}`, null, {
-        noarchive: true,
-      });
-    };
-
-    const getAsset = (asset) => CONSTANTS.assetUrl + CONSTANTS.assets[asset];
+    const getAsset = (asset) => FABULA.assetUrl + FABULA.assets[asset];
 
     const STYLE_CONTAINER = [
       `background: white;`,
@@ -646,6 +756,10 @@ var FabulaUltimator =
     const FONT_BODY = `font-family: 'PT Sans Narrow', sans-serif;`;
     const FONT_MONOSPACE = `font-family: Consolas, monospace;`;
 
+    const FABULA_DEFAULT_BASE = `#30669c`;
+    const FABULA_DEFAULT_ACCENT = `#4575a3`;
+    const FABULA_ERROR = `#d1232a`;
+
     const STYLE_HEADER = [
       `display: block;`,
       FONT_TITLE,
@@ -655,8 +769,8 @@ var FabulaUltimator =
       `text-transform: uppercase;`,
       `padding: 8px;`,
       `padding-left: 16px;`,
-      `color: rgb(255, 255, 255);`,
-      `background: rgb(103, 65, 104);`,
+      `color: white;`,
+      `background: ${FABULA_DEFAULT_BASE};`,
       `border-radius: 4px 4px 0 0;`,
     ].join('');
     const makeHeader = ({ text, tag = 'h3', style = STYLE_HEADER }) => {
@@ -678,10 +792,33 @@ var FabulaUltimator =
     const STYLE_LINK = [
       `display: block;`,
       FONT_MONOSPACE,
-      `background: rgb(110, 70, 141);`,
+      `background: ${FABULA_DEFAULT_ACCENT};`,
       `padding: 4px;`,
       `color: white;`,
       `border: none;`,
+    ].join('');
+
+    const STYLE_CONFIG_LINK = [
+      `display: block;`,
+      FONT_BODY,
+      `background: transparent;`,
+      `border-radius: 0;`,
+      `border: 1px solid black;`,
+      `border-bottom: 2px solid black;`,
+      `color: black;`,
+      `padding: 0px 4px;`,
+      `text-align: center;`,
+    ].join('');
+    const STYLE_CONFIG_ACTIVE = [
+      `display: block;`,
+      FONT_BODY,
+      `background: ${FABULA_DEFAULT_ACCENT};`,
+      `border-radius: 0px;`,
+      `border: 1px solid black;`,
+      `border-bottom: 2px solid black;`,
+      `color: white;`,
+      `padding: 0px 4px;`,
+      `text-align: center;`,
     ].join('');
     const makeLink = ({ text, href = text, style = STYLE_LINK, title = text }) => {
       return `<a style="${style}" href="${href}" title="${title}">${text}</a>`;
@@ -695,7 +832,7 @@ var FabulaUltimator =
       `color: black;`,
       `border: none;`,
     ].join('');
-    const STYLE_JOURNAL_IMAGE = [`border: 1px solid #000000;`, `border-radius: 4px;`].join('');
+    const STYLE_JOURNAL_IMAGE = [`border: 1px solid black;`, `border-radius: 4px;`].join('');
     const STYLE_JOURNAL_TEXT = [FONT_TITLE, `text-transform: uppercase;`, `padding: 8px;`].join('');
     const makeJournalLink = (sheet) => {
       const sheetName = sheet.get('name');
@@ -719,10 +856,24 @@ var FabulaUltimator =
 
       return makeLink({
         text: blueprint.join(''),
-        href: CONSTANTS.journalUrl + sheet.get('id'),
+        href: FABULA.journalUrl + sheet.get('id'),
         style: STYLE_JOURNAL_LINK,
         title: `Open ${sheetName}`,
       });
+    };
+
+    const makeConfigOptions = (settings = []) => {
+      const blueprint = [`<table style="width: 100%; padding: 4px 0; border-collapse: collapse;">`];
+      settings.forEach((setting) => {
+        blueprint.push(`<tr style="padding: 8px 0px;">`);
+        setting.forEach((row) => {
+          blueprint.push(`<td style="padding: 4px;">`, ...row, `</td>`);
+        });
+        blueprint.push(`</tr>`);
+      });
+
+      blueprint.push(`</table>`);
+      return blueprint;
     };
 
     const STYLE_IMAGE = [`position: absolute;`, `top: 25%;`, `left: 25%;`].join('');
@@ -747,8 +898,8 @@ var FabulaUltimator =
       `text-transform: uppercase;`,
       `padding: 8px;`,
       `padding-left: 16px;`,
-      `color: rgb(255, 255, 255);`,
-      `background: rgb(209, 35, 42);`,
+      `color: white;`,
+      `background:${FABULA_ERROR};`,
       `border-radius: 4px 4px 0 0;`,
     ].join('');
     const makeError = ({ error, header = 'An Error Occurred!' }) => {
@@ -762,8 +913,8 @@ var FabulaUltimator =
     on('ready', () => {
       FabulaUltimator.checkInstall();
       FabulaUltimator.registerEventHandlers();
-      log(`FabulaUltimator ${CONSTANTS.version}`);
-      sendChat(CONSTANTS.script, '!fabula', null, { noarchive: true });
+      log(`FabulaUltimator ${FABULA.version}`);
+      sendChat(FABULA.script, '!fabula', null, { noarchive: true });
     });
 
     return {

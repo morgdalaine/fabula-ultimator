@@ -6,7 +6,29 @@
   "description": "",
   "authors": "morgdalaine",
   "roll20userid": "61327",
-  "useroptions": [],
+  "useroptions": [
+    {
+      "name": "overwrite",
+      "type": "select",
+      "options": ["off", "on"],
+      "default": "off",
+      "decription": "Overwrite existing sheets when importing a sheet with the same character name"
+    },
+    {
+      "name": "inplayerjournals",
+      "type": "select",
+      "options": ["all", "none", "self"],
+      "default": "all",
+      "decription": "Set default value for In Player Journals"
+    },
+    {
+      "name": "controlledby",
+      "type": "select",
+      "options": ["all", "none", "self"],
+      "default": "all",
+      "decription": "Set default value for Controlled By"
+    }
+  ],
   "dependencies": [],
   "modifies": {
     "character.*": "read,write",
