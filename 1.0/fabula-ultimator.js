@@ -428,8 +428,6 @@ var FabulaUltimator =
         });
       }
 
-      whisper(player, fabulaContainer({ body: [`Importing **${json.name}**...`] }));
-
       sheet.set({
         gmnotes: raw,
       });
@@ -930,7 +928,7 @@ var FabulaUltimator =
       FabulaUltimator.checkInstall();
       FabulaUltimator.registerEventHandlers();
       log(`FabulaUltimator ${FABULA.version}`);
-      sendChat(FABULA.script, '!fabula', null, { noarchive: true });
+      // sendChat(FABULA.script, '!fabula', null, { noarchive: true });
     });
 
     return {
